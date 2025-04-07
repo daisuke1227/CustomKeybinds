@@ -4,7 +4,7 @@
 #include <Geode/cocos/robtop/keyboard_dispatcher/CCKeyboardDispatcher.h>
 
 // Global pointer to the MoreOptionsLayer instance.
-// You must initialize and update this pointer appropriately elsewhere in your project.
+// This pointer will be set when MoreOptionsLayer is initialized.
 MoreOptionsLayer* g_moreOptionsLayerInstance = nullptr;
 
 // Expose CCKeyboardDispatcher::dispatchKeyboardMSG
@@ -14,7 +14,6 @@ extern "C" {
         bool down,
         bool repeat
     ) {
-        // Forward to the singleton instance’s method.
         return cocos2d::CCKeyboardDispatcher::get()->dispatchKeyboardMSG(key, down, repeat);
     }
 }
@@ -31,18 +30,32 @@ extern "C" {
     }
 }
 
-// Since MoreOptionsLayer::onKeybindings is a private member, we can bypass access control
-// using a pointer-to-member function hack. This is not ideal in standard application code,
-// but it is sometimes used in modding contexts.
-typedef void (MoreOptionsLayer::*OnKeybindingsFnType)(cocos2d::CCObject*);
-static OnKeybindingsFnType onKeybindingsFn = reinterpret_cast<OnKeybindingsFnType>(&MoreOptionsLayer::onKeybindings);
+// Create an accessor subclass to expose MoreOptionsLayer::onKeybindings (which is private)
+class MoreOptionsLayerAccessor : public MoreOptionsLayer {
+public:
+    using MoreOptionsLayer::onKeybindings; // make private onKeybindings accessible
+};
 
-// Expose MoreOptionsLayer::onKeybindings
+// Expose MoreOptionsLayer::onKeybindings via our accessor class
 extern "C" {
     GEODE_EXPORT void MoreOptionsLayer_onKeybindings(cocos2d::CCObject* obj) {
         if (g_moreOptionsLayerInstance) {
-            // Call the private member function via the function pointer.
-            (g_moreOptionsLayerInstance->*onKeybindingsFn)(obj);
+            // Cast to our accessor subclass to bypass private access and call the function.
+            static_cast<MoreOptionsLayerAccessor*>(g_moreOptionsLayerInstance)->onKeybindings(obj);
         }
     }
 }
+
+// Hook into MoreOptionsLayer's initialization using Geode's $modify macro
+// to set the global instance pointer when the layer is created.
+class $modify(MoreOptionsLayer, MoreOptionsLayer) {
+public:
+    bool init() {
+        bool ret = MoreOptionsLayer::init();
+        if (ret) {
+            // Set the global pointer to this instance
+            g_moreOptionsLayerInstance = this;
+        }
+        return ret;
+    }
+};
