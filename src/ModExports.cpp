@@ -1,6 +1,11 @@
+#include <cocos2d.h>
 #include <Geode/modify/CCKeyboardDispatcher.hpp>
 #include <Geode/modify/MoreOptionsLayer.hpp>
 #include <Geode/cocos/robtop/keyboard_dispatcher/CCKeyboardDispatcher.h>
+
+// Global pointer to the MoreOptionsLayer instance.
+// You must initialize and manage this pointer appropriately elsewhere in your code.
+MoreOptionsLayer* g_moreOptionsLayerInstance = nullptr;
 
 // Expose CCKeyboardDispatcher::dispatchKeyboardMSG
 extern "C" {
@@ -28,14 +33,10 @@ extern "C" {
 
 // Expose MoreOptionsLayer::onKeybindings
 extern "C" {
-    GEODE_EXPORT void MoreOptionsLayer_onKeybindings(CCObject* obj) {
-        // Since onKeybindings is an instance method, you need to decide how you want to expose it.
-        // For example, you might forward it on a singleton instance if one exists,
-        // or you could simply implement a dummy that calls the original implementation on an instance.
-        // For this example, we assume there is a global MoreOptionsLayer instance:
-        auto layer = MoreOptionsLayer::getInstance();
-        if (layer) {
-            layer->onKeybindings(obj);
+    GEODE_EXPORT void MoreOptionsLayer_onKeybindings(cocos2d::Ref* obj) {
+        // Use the globally managed MoreOptionsLayer instance.
+        if (g_moreOptionsLayerInstance) {
+            g_moreOptionsLayerInstance->onKeybindings(obj);
         }
     }
 }
