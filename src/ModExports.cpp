@@ -4,7 +4,7 @@
 #include <Geode/cocos/robtop/keyboard_dispatcher/CCKeyboardDispatcher.h>
 
 // Global pointer to the MoreOptionsLayer instance.
-// You must initialize and manage this pointer appropriately elsewhere in your code.
+// You must initialize and update this pointer appropriately elsewhere in your project.
 MoreOptionsLayer* g_moreOptionsLayerInstance = nullptr;
 
 // Expose CCKeyboardDispatcher::dispatchKeyboardMSG
@@ -31,12 +31,18 @@ extern "C" {
     }
 }
 
+// Since MoreOptionsLayer::onKeybindings is a private member, we can bypass access control
+// using a pointer-to-member function hack. This is not ideal in standard application code,
+// but it is sometimes used in modding contexts.
+typedef void (MoreOptionsLayer::*OnKeybindingsFnType)(cocos2d::CCObject*);
+static OnKeybindingsFnType onKeybindingsFn = reinterpret_cast<OnKeybindingsFnType>(&MoreOptionsLayer::onKeybindings);
+
 // Expose MoreOptionsLayer::onKeybindings
 extern "C" {
-    GEODE_EXPORT void MoreOptionsLayer_onKeybindings(cocos2d::Ref* obj) {
-        // Use the globally managed MoreOptionsLayer instance.
+    GEODE_EXPORT void MoreOptionsLayer_onKeybindings(cocos2d::CCObject* obj) {
         if (g_moreOptionsLayerInstance) {
-            g_moreOptionsLayerInstance->onKeybindings(obj);
+            // Call the private member function via the function pointer.
+            (g_moreOptionsLayerInstance->*onKeybindingsFn)(obj);
         }
     }
 }
